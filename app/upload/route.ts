@@ -6,30 +6,28 @@ import * as z from 'zod'
 
 const MAX_SIZE = 15 * 1024
 
-const formSchema = z.promise(
-  z.object({
-    dirname: z.string({
-      invalid_type_error: 'Dirname must be a string',
-      required_error: 'Dirname is required',
-    }),
-    filename: z.string({
-      invalid_type_error: 'Filename must be a string',
-      required_error: 'Filename is required',
-    }),
-    blob: z
-      .instanceof(Blob, { message: 'Invalid file data' })
-      .refine(b => b.size <= MAX_SIZE, { message: `File size greater than ${bytes(MAX_SIZE)}` }),
+const formSchema = z.object({
+  dirname: z.string({
+    invalid_type_error: 'Dirname must be a string',
+    required_error: 'Dirname is required',
   }),
-)
+  filename: z.string({
+    invalid_type_error: 'Filename must be a string',
+    required_error: 'Filename is required',
+  }),
+  blob: z
+    .instanceof(Blob, { message: 'Invalid file data' })
+    .refine(b => b.size <= MAX_SIZE, { message: `File size greater than ${bytes(MAX_SIZE)}` }),
+})
 
 export async function POST(request: NextRequest) {
   try {
-    const { dirname, filename, blob } = await formSchema.parse(
-      request
-        .formData()
-        .then(f => f.entries())
-        .then(Object.fromEntries),
-    )
+    const { dirname, filename, blob } = await request
+      .formData()
+      .then(f => f.entries())
+      .then(Object.fromEntries)
+      .then(formSchema.parse)
+
     const uploadDir = await getUploadDir(dirname)
     const buffer = Buffer.from(await blob.arrayBuffer())
     await writeFile(`${uploadDir}/${filename}`, buffer)

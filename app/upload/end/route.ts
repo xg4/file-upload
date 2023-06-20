@@ -8,26 +8,24 @@ import path from 'path'
 import { v4 } from 'uuid'
 import * as z from 'zod'
 
-const formSchema = z.promise(
-  z.object({
-    dirname: z.string({
-      invalid_type_error: 'Dirname must be a string',
-      required_error: 'Dirname is required',
-    }),
-    type: z.string({
-      invalid_type_error: 'Type must be a string',
-      required_error: 'Type is required',
-    }),
-    total: z.number({
-      invalid_type_error: 'Total must be a number',
-      required_error: 'Total is required',
-    }),
+const formSchema = z.object({
+  dirname: z.string({
+    invalid_type_error: 'Dirname must be a string',
+    required_error: 'Dirname is required',
   }),
-)
+  type: z.string({
+    invalid_type_error: 'Type must be a string',
+    required_error: 'Type is required',
+  }),
+  total: z.number({
+    invalid_type_error: 'Total must be a number',
+    required_error: 'Total is required',
+  }),
+})
 
 export async function POST(request: NextRequest) {
   try {
-    const { dirname, type, total } = await formSchema.parse(request.json())
+    const { dirname, type, total } = await request.json().then(formSchema.parse)
     const uploadDir = await getUploadDir(dirname)
 
     const files = await readdir(uploadDir)
