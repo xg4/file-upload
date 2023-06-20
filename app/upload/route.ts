@@ -1,34 +1,44 @@
 import { getUploadDir } from '@/utils/dir'
+import bytes from 'bytes'
 import { writeFile } from 'fs/promises'
 import { NextRequest, NextResponse } from 'next/server'
-import { ValidationError, mixed, object, string } from 'yup'
+import * as z from 'zod'
 
-const formSchema = object({
-  dirname: string().required(),
-  filename: string().required(),
-  blob: mixed<Blob>()
-    .required('File blob is required.')
-    .test('isBlob', 'Invalid file format', value => value instanceof Blob)
-    .test('maxSize', 'File size is too large', value => value && value.size <= 15 * 1024),
-})
+const MAX_SIZE = 15 * 1024
+
+const formSchema = z.promise(
+  z.object({
+    dirname: z.string({
+      invalid_type_error: 'Dirname must be a string',
+      required_error: 'Dirname is required',
+    }),
+    filename: z.string({
+      invalid_type_error: 'Filename must be a string',
+      required_error: 'Filename is required',
+    }),
+    blob: z
+      .instanceof(Blob, { message: 'Invalid file data' })
+      .refine(b => b.size <= MAX_SIZE, { message: `File size greater than ${bytes(MAX_SIZE)}` }),
+  }),
+)
 
 export async function POST(request: NextRequest) {
   try {
-    const formData = await request
-      .formData()
-      .then(f => f.entries())
-      .then(Object.fromEntries)
-    const { dirname, filename, blob } = await formSchema.validate(formData)
+    const { dirname, filename, blob } = await formSchema.parse(
+      request
+        .formData()
+        .then(f => f.entries())
+        .then(Object.fromEntries),
+    )
     const uploadDir = await getUploadDir(dirname)
     const buffer = Buffer.from(await blob.arrayBuffer())
     await writeFile(`${uploadDir}/${filename}`, buffer)
 
     return NextResponse.json('', { status: 201 })
   } catch (err) {
-    if (err instanceof ValidationError) {
-      return NextResponse.json({ error: err.message }, { status: 500 })
+    if (err instanceof z.ZodError) {
+      return NextResponse.json(err, { status: 400 })
     }
-    console.error('Error while trying to upload a file\n', err)
-    return NextResponse.json({ error: 'Something went wrong.' }, { status: 500 })
+    return NextResponse.json('Internal Server Error', { status: 500 })
   }
 }

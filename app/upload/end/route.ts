@@ -6,18 +6,28 @@ import mime from 'mime'
 import { NextRequest, NextResponse } from 'next/server'
 import path from 'path'
 import { v4 } from 'uuid'
-import { number, object, string } from 'yup'
+import * as z from 'zod'
 
-const formSchema = object({
-  dirname: string().required(),
-  type: string().required(),
-  total: number().required(),
-})
+const formSchema = z.promise(
+  z.object({
+    dirname: z.string({
+      invalid_type_error: 'Dirname must be a string',
+      required_error: 'Dirname is required',
+    }),
+    type: z.string({
+      invalid_type_error: 'Type must be a string',
+      required_error: 'Type is required',
+    }),
+    total: z.number({
+      invalid_type_error: 'Total must be a number',
+      required_error: 'Total is required',
+    }),
+  }),
+)
 
 export async function POST(request: NextRequest) {
-  const { dirname, type, total } = await formSchema.validate(await request.json())
-
   try {
+    const { dirname, type, total } = await formSchema.parse(request.json())
     const uploadDir = await getUploadDir(dirname)
 
     const files = await readdir(uploadDir)
@@ -39,8 +49,10 @@ export async function POST(request: NextRequest) {
     await rm(uploadDir, { recursive: true })
     const [, fileUrl] = filePath.split('/public')
     return NextResponse.json({ fileUrl })
-  } catch (e) {
-    console.error('Error while trying to upload a file\n', e)
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return NextResponse.json(err, { status: 400 })
+    }
+    return NextResponse.json('Internal Server Error', { status: 500 })
   }
-  return NextResponse.json({ error: 'Something went wrong.' }, { status: 500 })
 }
