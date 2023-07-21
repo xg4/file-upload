@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
       .then(formSchema.parse)
 
     const uploadDir = await getUploadDir(dirname)
-    const buffer = Buffer.from(await blob.arrayBuffer())
+    const buffer = await blob.arrayBuffer().then(Buffer.from)
     await writeFile(`${uploadDir}/${filename}`, buffer)
 
     return NextResponse.json('', { status: 201 })
