@@ -1,5 +1,6 @@
 'use client'
 
+import MonitorFrame from '@/components/MonitorFrame'
 import upload from '@/services/upload'
 import retry from 'async-retry'
 import Image from 'next/image'
@@ -31,6 +32,8 @@ export default function Home() {
       {urls.map(url => (
         <Image width={200} height={200} className="object-contain" key={url} src={url} alt=""></Image>
       ))}
+
+      <MonitorFrame />
     </main>
   )
 }
