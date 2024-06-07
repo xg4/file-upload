@@ -1,44 +1,46 @@
-import { chunk } from '@/utils/file'
-import { create } from '@/utils/formData'
-import md5 from '@/utils/md5'
+import { chunkFile, hashFile } from '@/utils/file'
+import { createFormData } from '@/utils/formData'
 import ky from 'ky'
-import { chunk as _chunk, compact } from 'lodash'
+import { compact } from 'lodash'
+import pLimit from 'p-limit'
+
+const LIMIT_SIZE = 15 * 1024
+
+const LIMIT_COUNT = 10
+
+const limit = pLimit(LIMIT_COUNT)
 
 export default async function upload(file: File) {
-  const chunks = chunk(file, 15 * 1024)
+  const chunks = chunkFile(file, LIMIT_SIZE)
 
-  const dirname = md5([chunks.length, file.name, file.type, file.size, file.lastModified].join('-'))
+  const hash = hashFile(file)
 
   const savedFiles = await ky
     .post('/upload/start', {
       json: {
-        dirname,
+        hash,
       },
     })
     .json<string[]>()
 
-  const getChunkName = (index: number) => [index, chunks.length].join('-').concat('.part')
   const list = chunks.map((blob, index) => {
-    const filename = getChunkName(index + 1)
+    const filename = [index + 1, chunks.length].join('-')
     if (savedFiles.includes(filename)) {
       return
     }
-    return create({
+    return createFormData({
       blob,
       filename,
-      dirname: dirname,
+      hash,
     })
   })
 
-  const files = _chunk(compact(list), 10)
-  for (const chunk of files) {
-    await Promise.all(chunk.map(uploadFile))
-  }
+  await Promise.all(compact(list).map(formData => limit(uploadFile, formData)))
 
   return await ky
     .post('/upload/end', {
       json: {
-        dirname,
+        hash,
         type: file.type,
         total: list.length,
       },

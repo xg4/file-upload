@@ -1,9 +1,8 @@
-import dayjs from 'dayjs'
 import { mkdir, stat } from 'fs/promises'
 import path from 'path'
 
-export async function getUploadDir(dirname: string) {
-  const uploadDir = path.join(process.cwd(), 'public/uploads/', dayjs().format('DD-MM-YYYY'), dirname)
+export async function getUploadDir(hash: string) {
+  const uploadDir = path.resolve(process.cwd(), 'public/uploads/', hash)
   try {
     await stat(uploadDir)
   } catch (e: any) {

@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import * as z from 'zod'
 
 const formSchema = z.object({
-  dirname: z.string({
+  hash: z.string({
     invalid_type_error: 'Dirname must be a string',
     required_error: 'Dirname is required',
   }),
@@ -12,8 +12,8 @@ const formSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const { dirname } = await request.json().then(formSchema.parse)
-    const uploadDir = await getUploadDir(dirname)
+    const { hash } = await request.json().then(formSchema.parse)
+    const uploadDir = await getUploadDir(hash)
     const files = await readdir(uploadDir)
     return NextResponse.json(files)
   } catch (err) {

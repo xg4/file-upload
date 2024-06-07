@@ -1,10 +1,11 @@
-export function create(data: Record<string, string | Blob | number | boolean>) {
+export function createFormData(data: Record<string, string | Blob | number | boolean>) {
   const formData = new FormData()
-  Object.entries(data).map(([key, value]) => {
+  Object.keys(data).map(key => {
+    const value = data[key]
     if (value instanceof Blob) {
       formData.append(key, value)
     } else {
-      formData.append(key, value + '')
+      formData.append(key, value.toString())
     }
   })
   return formData

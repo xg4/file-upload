@@ -7,7 +7,7 @@ import * as z from 'zod'
 const MAX_SIZE = 15 * 1024
 
 const formSchema = z.object({
-  dirname: z.string({
+  hash: z.string({
     invalid_type_error: 'Dirname must be a string',
     required_error: 'Dirname is required',
   }),
@@ -22,13 +22,13 @@ const formSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const { dirname, filename, blob } = await request
+    const { hash, filename, blob } = await request
       .formData()
       .then(f => f.entries())
       .then(Object.fromEntries)
       .then(formSchema.parse)
 
-    const uploadDir = await getUploadDir(dirname)
+    const uploadDir = await getUploadDir(hash)
     const buffer = await blob.arrayBuffer().then(Buffer.from)
     await writeFile(`${uploadDir}/${filename}`, buffer)
 

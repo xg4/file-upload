@@ -9,7 +9,7 @@ import { v4 } from 'uuid'
 import * as z from 'zod'
 
 const formSchema = z.object({
-  dirname: z.string({
+  hash: z.string({
     invalid_type_error: 'Dirname must be a string',
     required_error: 'Dirname is required',
   }),
@@ -25,8 +25,8 @@ const formSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const { dirname, type, total } = await request.json().then(formSchema.parse)
-    const uploadDir = await getUploadDir(dirname)
+    const { hash, type, total } = await request.json().then(formSchema.parse)
+    const uploadDir = await getUploadDir(hash)
 
     const files = await readdir(uploadDir)
       .then(
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing files' }, { status: 400 })
     }
 
-    const filename = `${dirname}-${v4()}.${mime.getExtension(type)}`
+    const filename = `${v4()}.${mime.getExtension(type)}`
     const filePath = path.join(path.parse(uploadDir).dir, filename)
     await merge(files, filePath)
     await rm(uploadDir, { recursive: true })
